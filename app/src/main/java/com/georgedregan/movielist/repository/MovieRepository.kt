@@ -4,11 +4,11 @@ import androidx.compose.runtime.mutableStateListOf
 import com.georgedregan.movielist.model.Movie
 
 class MovieRepository {
-    private val movieList = mutableStateListOf<Movie>()
-
-    fun getAllMovies(): List<Movie> = movieList.apply{
+    private val movieList = mutableStateListOf<Movie>().apply{
         addAll(getHardcodedMovies())
     }
+
+    fun getAllMovies(): List<Movie> = movieList
 
     fun addMovie(movie: Movie) {
         movieList.add(movie)

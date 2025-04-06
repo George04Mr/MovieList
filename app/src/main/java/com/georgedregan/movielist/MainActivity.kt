@@ -3,53 +3,116 @@ package com.georgedregan.movielist
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.georgedregan.movielist.ui.MovieListScreen
-import com.georgedregan.movielist.ui.theme.MovieListTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.ui.AddEditMovieScreen
+import com.georgedregan.movielist.ui.MovieListScreen
 import com.georgedregan.movielist.ui.StatisticsScreen
+import com.georgedregan.movielist.ui.theme.MovieListTheme
+import com.georgedregan.movielist.ui.theme.darkGrayColor
 import com.georgedregan.movielist.viewmodel.MovieViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MovieListTheme {
-                var currentScreen by remember { mutableStateOf<Screen>(Screen.Statistics) }
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.List) }
                 var editingMovie by remember { mutableStateOf<Movie?>(null) }
                 val viewModel: MovieViewModel = viewModel()
+                val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+                val coroutineScope = rememberCoroutineScope()
+                val currentPage by remember { derivedStateOf { pagerState.currentPage } }
 
                 when (currentScreen) {
-                    Screen.List -> MovieListScreen(
-                        viewModel = viewModel,
-                        onAddMovie = {
-                            editingMovie = null
-                            currentScreen = Screen.AddEdit
-                        },
-                        onEditMovie = { movie ->
-                            editingMovie = movie
-                            currentScreen = Screen.AddEdit
-                        },
-                        onStatsClick = { currentScreen = Screen.Statistics }
-                    )
+                    Screen.List ->
+                        Scaffold(
+                            bottomBar = {
+                                NavigationBar(containerColor = darkGrayColor) {
+                                    NavigationBarItem(
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Home,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        selected = currentPage == 0,
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(
+                                                    0
+                                                )
+                                            }
+                                        }
+                                    )
+                                    NavigationBarItem(
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        selected = currentPage == 1,
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(
+                                                    1
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            },
+                        ) { innerPadding ->
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.padding(innerPadding),
+                                pageContent = { page ->
+                                    when (page) {
+                                        0 -> MovieListScreen(
+                                            viewModel = viewModel,
+                                            onAddMovie = {
+                                                editingMovie = null
+                                                currentScreen = Screen.AddEdit
+                                            },
+                                            onEditMovie = { movie ->
+                                                editingMovie = movie
+                                                currentScreen = Screen.AddEdit
+                                            },
+                                        )
+
+                                        1 -> StatisticsScreen(  // New screen
+                                            viewModel = viewModel
+                                        )
+
+
+                                    }
+                                })
+                        }
+
                     Screen.AddEdit -> AddEditMovieScreen(
                         viewModel = viewModel,
                         movie = editingMovie,
-                        onBack = { currentScreen = Screen.List }
-                    )
-                    Screen.Statistics -> StatisticsScreen(  // New screen
-                        viewModel = viewModel,
                         onBack = { currentScreen = Screen.List }
                     )
                 }
@@ -61,6 +124,5 @@ class MainActivity : ComponentActivity() {
 sealed class Screen {
     object List : Screen()
     object AddEdit : Screen()
-    object Statistics : Screen()
 }
 
