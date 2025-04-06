@@ -36,7 +36,6 @@ import com.github.mikephil.charting.utils.ColorTemplate
 @Composable
 fun StatisticsScreen(
     viewModel: MovieViewModel,
-    onBack: () -> Unit
 ) {
     val movies by viewModel.movies
 
@@ -60,81 +59,68 @@ fun StatisticsScreen(
         counts
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Movie Statistics") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // Bar chart
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .padding(16.dp)
+        ) {
+            AndroidView(
+                factory = { context ->
+                    BarChart(context).apply {
+                        // Configure chart
+                        description.isEnabled = false
+                        setDrawGridBackground(false)
+                        xAxis.position = XAxis.XAxisPosition.BOTTOM
+                        axisLeft.setDrawGridLines(false)
+                        axisRight.setDrawGridLines(false)
+                        legend.isEnabled = false
+
+                        // Prepare data
+                        val entries = listOf(
+                            BarEntry(0f, stats["0-3"]!!.toFloat()),
+                            BarEntry(1f, stats["3-6"]!!.toFloat()),
+                            BarEntry(2f, stats["6-8"]!!.toFloat()),
+                            BarEntry(3f, stats["8-10"]!!.toFloat())
+                        )
+
+                        val dataSet = BarDataSet(entries, "Ratings").apply {
+                            colors = ColorTemplate.MATERIAL_COLORS.toList()
+                            valueTextColor = android.graphics.Color.BLACK
+                            valueTextSize = 12f
+                        }
+
+                        val barData = BarData(dataSet)
+                        data = barData
+
+                        // X-axis labels
+                        val xLabels = listOf("0-3", "3-6", "6-8", "8-10")
+                        xAxis.valueFormatter = IndexAxisValueFormatter(xLabels)
+
+                        animateY(1000)
                     }
                 }
             )
         }
-    ) { padding ->
+
+        // Statistics counts
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Bar chart
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .padding(16.dp)
-            ) {
-                AndroidView(
-                    factory = { context ->
-                        BarChart(context).apply {
-                            // Configure chart
-                            description.isEnabled = false
-                            setDrawGridBackground(false)
-                            xAxis.position = XAxis.XAxisPosition.BOTTOM
-                            axisLeft.setDrawGridLines(false)
-                            axisRight.setDrawGridLines(false)
-                            legend.isEnabled = false
-
-                            // Prepare data
-                            val entries = listOf(
-                                BarEntry(0f, stats["0-3"]!!.toFloat()),
-                                BarEntry(1f, stats["3-6"]!!.toFloat()),
-                                BarEntry(2f, stats["6-8"]!!.toFloat()),
-                                BarEntry(3f, stats["8-10"]!!.toFloat())
-                            )
-
-                            val dataSet = BarDataSet(entries, "Ratings").apply {
-                                colors = ColorTemplate.MATERIAL_COLORS.toList()
-                                valueTextColor = android.graphics.Color.BLACK
-                                valueTextSize = 12f
-                            }
-
-                            val barData = BarData(dataSet)
-                            data = barData
-
-                            // X-axis labels
-                            val xLabels = listOf("0-3", "3-6", "6-8", "8-10")
-                            xAxis.valueFormatter = IndexAxisValueFormatter(xLabels)
-
-                            animateY(1000)
-                        }
-                    }
-                )
-            }
-
-            // Statistics counts
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("Movie Statistics", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("0-3 count: ${stats["0-3"]}")
-                Text("3-6 count: ${stats["3-6"]}")
-                Text("6-8 count: ${stats["6-8"]}")
-                Text("8-10 count: ${stats["8-10"]}")
-            }
+            Text("Movie Statistics", style = MaterialTheme.typography.headlineMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("0-3 count: ${stats["0-3"]}")
+            Text("3-6 count: ${stats["3-6"]}")
+            Text("6-8 count: ${stats["6-8"]}")
+            Text("8-10 count: ${stats["8-10"]}")
         }
     }
 }
