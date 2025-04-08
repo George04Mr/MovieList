@@ -2,8 +2,10 @@ package com.georgedregan.movielist.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,28 +25,41 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.georgedregan.movielist.R
 import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.ui.theme.customGreen
 import com.georgedregan.movielist.ui.theme.darkGrayColor
@@ -64,10 +81,27 @@ fun MovieListScreen(
     viewModel: MovieViewModel = viewModel(),
     onAddMovie: () -> Unit = {},
     onEditMovie: (Movie) -> Unit = {},
+    onClickMovie: (Movie) -> Unit = {}
 ) {
+    val movies by viewModel.movies
+    val isLoading by viewModel.isLoading
+    val errorMessage by viewModel.errorMessage
     val selectedGenre by viewModel.selectedGenre
     val availableGenres by remember { derivedStateOf { viewModel.getAvailableGenres() } }
-    val filteredMovies by remember { derivedStateOf { viewModel.getFilteredMovies() } }
+    val availableYears by remember { derivedStateOf { viewModel.getAvailableYears() } }
+
+    // State for sort options
+    var showSortDialog by remember { mutableStateOf(false) }
+    var selectedSortOption by remember { mutableStateOf("id") }
+    var selectedSortOrder by remember { mutableStateOf("asc") }
+
+    // Handle error messages
+    if (!errorMessage.isNullOrEmpty()) {
+        LaunchedEffect(errorMessage) {
+            //scaffoldState.snackbarHostState.showSnackbar(errorMessage!!)
+            //viewModel.clearErrorMessage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -89,10 +123,21 @@ fun MovieListScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = darkGrayColor.copy(alpha = 0.9f)
-                    )
+                    ),
+                    actions = {
+                        IconButton(onClick = { showSortDialog = true }) {
+                            Image(
+                                painter = painterResource(id = R.drawable.baseline_filter_list_24),
+                                contentDescription = "Filter Icon",
+                                modifier = Modifier.size(24.dp),
+                                contentScale = ContentScale.Fit,
+                                colorFilter = ColorFilter.tint(Color.Green)
+                            )
+                        }
+                    }
                 )
 
-                // Add genre filter row
+                // Filter chips row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -101,7 +146,7 @@ fun MovieListScreen(
                         .padding(vertical = 8.dp, horizontal = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // All genres filter
+                    // All filter
                     FilterChip(
                         selected = selectedGenre == null,
                         onClick = { viewModel.setGenreFilter(null) },
@@ -129,7 +174,6 @@ fun MovieListScreen(
                 }
             }
         },
-
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddMovie,
@@ -140,22 +184,100 @@ fun MovieListScreen(
             }
         },
         content = { innerPadding ->
-            LazyColumn(
-                contentPadding = innerPadding,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
-            ) {
-                items(filteredMovies) { movie ->  // Use filteredMovies instead of movies
-                    MovieCard(
-                        movie = movie,
-                        onEdit = { onEditMovie(movie) },
-                        onDelete = { viewModel.deleteMovie(movie) }
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = customGreen
                     )
+                } else {
+                    LazyColumn(
+                        contentPadding = innerPadding,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.White)
+                    ) {
+                        items(movies) { movie ->
+                            MovieCard(
+                                movie = movie,
+                                onEdit = { onEditMovie(movie) },
+                                onDelete = { viewModel.deleteMovie(movie) },
+                                onClick = { onClickMovie(movie) }
+                            )
+                        }
+                    }
                 }
             }
         }
     )
+
+    // Sort dialog
+    if (showSortDialog) {
+        AlertDialog(
+            onDismissRequest = { showSortDialog = false },
+            title = { Text("Sort Movies") },
+            text = {
+                Column {
+                    Text("Sort by:", modifier = Modifier.padding(bottom = 8.dp))
+                    RadioGroup(
+                        selectedOption = selectedSortOption,
+                        options = listOf("Title" to "title", "Year" to "year", "Rating" to "rating"),
+                        onOptionSelected = { selectedSortOption = it }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Order:", modifier = Modifier.padding(bottom = 8.dp))
+                    RadioGroup(
+                        selectedOption = selectedSortOrder,
+                        options = listOf("Ascending" to "asc", "Descending" to "desc"),
+                        onOptionSelected = { selectedSortOrder = it }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setSort(selectedSortOption, selectedSortOrder)
+                        showSortDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = customGreen)
+                ) {
+                    Text("Apply")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSortDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun RadioGroup(
+    selectedOption: String,
+    options: List<Pair<String, String>>,
+    onOptionSelected: (String) -> Unit
+) {
+    Column {
+        options.forEach { (label, value) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOptionSelected(value) }
+                    .padding(8.dp)
+            ) {
+                RadioButton(
+                    selected = selectedOption == value,
+                    onClick = { onOptionSelected(value) },
+                    colors = RadioButtonDefaults.colors(selectedColor = customGreen)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = label)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -163,12 +285,14 @@ fun MovieListScreen(
 fun MovieCard(
     movie: Movie,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -217,7 +341,7 @@ fun MovieCard(
                     }
                 }
 
-                Text(text = "IMDB: ${movie.imdbRating}")
+                Text(text = "IMDB: ${String.format("%.1f",movie.imdbRating)}")
                 Text(text = "Distributor: ${movie.distribution}")
             }
 

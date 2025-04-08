@@ -60,4 +60,12 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.mp.android.chart)
     implementation(libs.androidx.compose.ui.viewbinding)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+
+    // Converter for JSON (Moshi or Gson)
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // OR: implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+
+    // OkHttp (optional, for logging)
+    implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11")
 }

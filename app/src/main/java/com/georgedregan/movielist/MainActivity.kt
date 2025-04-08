@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.ui.AddEditMovieScreen
+import com.georgedregan.movielist.ui.MovieDetailScreen
 import com.georgedregan.movielist.ui.MovieListScreen
 import com.georgedregan.movielist.ui.StatisticsScreen
 import com.georgedregan.movielist.ui.theme.MovieListTheme
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.List) }
                 var editingMovie by remember { mutableStateOf<Movie?>(null) }
                 val viewModel: MovieViewModel = viewModel()
+                var selectedMovie by remember { mutableStateOf<Movie?>(null) }
                 val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
                 val coroutineScope = rememberCoroutineScope()
                 val currentPage by remember { derivedStateOf { pagerState.currentPage } }
@@ -99,6 +101,9 @@ class MainActivity : ComponentActivity() {
                                                 editingMovie = movie
                                                 currentScreen = Screen.AddEdit
                                             },
+                                            onClickMovie = { movie ->
+                                                selectedMovie = movie
+                                                currentScreen = Screen.MovieDetails}
                                         )
 
                                         1 -> StatisticsScreen(  // New screen
@@ -115,6 +120,21 @@ class MainActivity : ComponentActivity() {
                         movie = editingMovie,
                         onBack = { currentScreen = Screen.List }
                     )
+
+                    Screen.MovieDetails -> {
+                        selectedMovie?.let { movie ->
+                            MovieDetailScreen(
+                                movie = movie,
+                                onBack = { currentScreen = Screen.List },
+                                onEditM = {
+                                    editingMovie = movie
+                                    currentScreen = Screen.AddEdit
+                                }
+                            )
+                        } ?: run {
+                            currentScreen = Screen.List
+                        }
+                    }
                 }
             }
         }
@@ -124,5 +144,6 @@ class MainActivity : ComponentActivity() {
 sealed class Screen {
     object List : Screen()
     object AddEdit : Screen()
+    object MovieDetails : Screen()
 }
 
