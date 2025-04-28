@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -18,6 +19,7 @@ import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import kotlinx.coroutines.delay
 
 @Composable
 fun StatisticsScreen(
@@ -25,6 +27,15 @@ fun StatisticsScreen(
 ) {
     val movies by viewModel.movies
     val colorScheme = MaterialTheme.colorScheme
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (viewModel.isNetworkAvailable.value && viewModel.isServerAvailable.value) {
+                viewModel.loadMovies()
+            }
+            delay(5000)
+        }
+    }
 
     // Calculate statistics
     val (stats, totalMovies) = remember(movies) {

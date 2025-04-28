@@ -21,7 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.ui.AddEditMovieScreen
 import com.georgedregan.movielist.ui.MovieDetailScreen
@@ -40,7 +40,8 @@ class MainActivity : ComponentActivity() {
             MovieListTheme {
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.List) }
                 var editingMovie by remember { mutableStateOf<Movie?>(null) }
-                val viewModel: MovieViewModel = viewModel()
+                val viewModel = ViewModelProvider(this)[MovieViewModel::class.java]
+
                 var selectedMovie by remember { mutableStateOf<Movie?>(null) }
                 val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
                 val coroutineScope = rememberCoroutineScope()

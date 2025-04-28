@@ -15,7 +15,9 @@ interface MovieApi {
     suspend fun getMovies(
         @Query("genre") genre: String? = null,
         @Query("sort_by") sortBy: String? = null,
-        @Query("sort_order") sortOrder: String? = null
+        @Query("sort_order") sortOrder: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 20
     ): List<Movie>
 
     @POST("movies")
@@ -29,4 +31,7 @@ interface MovieApi {
 
     @DELETE("movies/{id}")
     suspend fun deleteMovie(@Path("id") id: Int)
+
+    @GET("ping")
+    suspend fun ping(): Boolean
 }

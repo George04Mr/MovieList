@@ -67,6 +67,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
 import coil.compose.rememberAsyncImagePainter
 import com.georgedregan.movielist.R
 import com.georgedregan.movielist.model.Movie
@@ -83,12 +87,18 @@ fun MovieListScreen(
     onEditMovie: (Movie) -> Unit = {},
     onClickMovie: (Movie) -> Unit = {}
 ) {
-    val movies by viewModel.movies
+    val movies: LazyPagingItems<Movie> = viewModel.moviesPagedData.collectAsLazyPagingItems()
     val isLoading by viewModel.isLoading
     val errorMessage by viewModel.errorMessage
     val selectedGenre by viewModel.selectedGenre
     val availableGenres by remember { derivedStateOf { viewModel.getAvailableGenres() } }
-    val availableYears by remember { derivedStateOf { viewModel.getAvailableYears() } }
+    val isNetworkAvailable by viewModel.isNetworkAvailable
+    val isServerAvailable by viewModel.isServerAvailable
+
+    // Network status banner
+    val showNetworkBanner by remember {
+        derivedStateOf { !isNetworkAvailable || !isServerAvailable }
+    }
 
     // State for sort options
     var showSortDialog by remember { mutableStateOf(false) }
@@ -173,7 +183,25 @@ fun MovieListScreen(
                     }
                 }
             }
+            Column {
+                if (showNetworkBanner) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(if (!isNetworkAvailable) Color.Red else Color.Yellow)
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (!isNetworkAvailable) "Network unavailable - working offline"
+                            else "Server unavailable - working offline",
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
         },
+
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddMovie,
@@ -197,14 +225,22 @@ fun MovieListScreen(
                             .fillMaxSize()
                             .background(Color.White)
                     ) {
-                        items(movies) { movie ->
-                            MovieCard(
-                                movie = movie,
-                                onEdit = { onEditMovie(movie) },
-                                onDelete = { viewModel.deleteMovie(movie) },
-                                onClick = { onClickMovie(movie) }
-                            )
+                        items(
+                            count = movies.itemCount,
+                            key = movies.itemKey { it.id },
+                            contentType = movies.itemContentType{"Movies"}
+                        ) { index: Int ->
+                            val movie: Movie? = movies[index]
+                            movie?.let {
+                                MovieCard(
+                                    movie = movie,
+                                    onEdit = { onEditMovie(movie) },
+                                    onDelete = { viewModel.deleteMovie(movie) },
+                                    onClick = { onClickMovie(movie) }
+                                )
+                            }
                         }
+
                     }
                 }
             }
@@ -221,7 +257,11 @@ fun MovieListScreen(
                     Text("Sort by:", modifier = Modifier.padding(bottom = 8.dp))
                     RadioGroup(
                         selectedOption = selectedSortOption,
-                        options = listOf("Title" to "title", "Year" to "year", "Rating" to "rating"),
+                        options = listOf(
+                            "Title" to "title",
+                            "Year" to "year",
+                            "Rating" to "rating"
+                        ),
                         onOptionSelected = { selectedSortOption = it }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -341,7 +381,7 @@ fun MovieCard(
                     }
                 }
 
-                Text(text = "IMDB: ${String.format("%.1f",movie.imdbRating)}")
+                Text(text = "IMDB: ${String.format("%.1f", movie.imdbRating)}")
                 Text(text = "Distributor: ${movie.distribution}")
             }
 

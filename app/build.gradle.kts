@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -49,6 +50,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.room.runtime.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -61,6 +63,9 @@ dependencies {
     implementation(libs.mp.android.chart)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("androidx.paging:paging-runtime:3.3.6")
+    implementation("androidx.paging:paging-compose:3.3.6")
+    implementation("androidx.room:room-paging:2.6.1")
 
     // Converter for JSON (Moshi or Gson)
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
@@ -68,4 +73,12 @@ dependencies {
 
     // OkHttp (optional, for logging)
     implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.11")
+
+    val room_version = "2.7.0"
+
+    ksp("androidx.room:room-compiler:$room_version")
+    annotationProcessor("androidx.room:room-compiler:$room_version")
+
+    // optional - Kotlin Extensions and Coroutines support for Room
+    implementation("androidx.room:room-ktx:$room_version")
 }
