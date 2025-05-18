@@ -67,6 +67,8 @@ dependencies {
     implementation("androidx.paging:paging-runtime:3.3.6")
     implementation("androidx.paging:paging-compose:3.3.6")
     implementation("androidx.room:room-paging:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+
 
     // Converter for JSON (Moshi or Gson)
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")

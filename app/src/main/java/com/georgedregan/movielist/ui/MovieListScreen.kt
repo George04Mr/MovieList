@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -237,6 +236,30 @@ fun MovieListScreen(
                                     onEdit = { onEditMovie(movie) },
                                     onDelete = { viewModel.deleteMovie(movie) },
                                     onClick = { onClickMovie(movie) }
+                                )
+                            }
+                        }
+                        item {
+                            if (movies.loadState.append is androidx.paging.LoadState.Loading) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = customGreen)
+                                }
+                            }
+                        }
+
+                        // Error handling on pagination
+                        item {
+                            val appendError = movies.loadState.append as? androidx.paging.LoadState.Error
+                            appendError?.let {
+                                Text(
+                                    text = "Error loading more movies: ${it.error.localizedMessage}",
+                                    color = Color.Red,
+                                    modifier = Modifier.padding(16.dp)
                                 )
                             }
                         }

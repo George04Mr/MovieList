@@ -16,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.Job
 
 class MovieViewModel(private val application: Application) : AndroidViewModel(application) {
     private val repository = MovieRepository(application.applicationContext)
@@ -46,11 +45,12 @@ class MovieViewModel(private val application: Application) : AndroidViewModel(ap
     private val _isServerAvailable = mutableStateOf(true)
     val isServerAvailable: State<Boolean> = _isServerAvailable
 
-    val moviesPagedData = repository.getAllPaged().cachedIn(viewModelScope)
+    val moviesPagedData =
+        repository.getAllPaged().cachedIn(viewModelScope)
 
     init {
-        checkNetworkStatus()
-        checkServerStatus()
+//        checkNetworkStatus()
+//        checkServerStatus()
         loadMovies()
     }
 

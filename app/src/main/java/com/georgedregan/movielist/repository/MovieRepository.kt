@@ -1,6 +1,7 @@
 package com.georgedregan.movielist.repository
 
 import android.content.Context
+import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -13,12 +14,13 @@ import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.network.MovieApi
 import com.georgedregan.movielist.network.RetrofitClient
 import com.georgedregan.movielist.database.MovieDatabase
+import com.georgedregan.movielist.paging.MoviePagingSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-class MovieRepository(private val context: Context) {
+class MovieRepository(context: Context) {
     private val apiService: MovieApi = RetrofitClient.api
     private val db = Room.databaseBuilder(
         context,
@@ -26,15 +28,23 @@ class MovieRepository(private val context: Context) {
     ).build()
     private val movieDao = db.movieDao()
 
+    @OptIn(ExperimentalPagingApi::class)
     fun getAllPaged(): Flow<PagingData<Movie>> = Pager(
-        PagingConfig(
-            pageSize = 10,
-            prefetchDistance = 20
-        )
-    ) {
-        movieDao.getAllPaged()
-    }.flow
-        .map { value -> value.map { it.toMovie() } }
+        config = PagingConfig(pageSize = 20),
+        remoteMediator = MovieRemoteMediator(
+            database = db,
+            apiService = apiService
+        ),
+        pagingSourceFactory = { movieDao.getAllPaged() }
+    ).flow
+        .map { pagingData -> pagingData.map { it.toMovie() } }
+
+//    fun getAllPaged(): Flow<PagingData<Movie>> = Pager(
+//        PagingConfig(pageSize = 20)
+//    ) {
+//        movieDao.getAllPaged()
+//    }.flow
+//        .map { value -> value.map { it.toMovie() } }
 
     suspend fun getMovies(
         genre: String? = null,
@@ -45,7 +55,13 @@ class MovieRepository(private val context: Context) {
     ): List<Movie> = withContext(Dispatchers.IO) {
         try {
             // Try to get from network first
-            val networkMovies = apiService.getMovies(genre, sortBy, sortOrder)
+            val networkMovies = apiService.getMovies(
+                genre = genre,
+                sortBy = sortBy,
+                sortOrder = sortOrder,
+                page = page,
+                pageSize = pageSize
+            )
 
             // Cache the movies locally
             movieDao.insertAll(networkMovies.map { it.toEntity() })
@@ -100,17 +116,6 @@ class MovieRepository(private val context: Context) {
         }
     }
 
-    // Extension functions for conversion
-    private fun Movie.toEntity(): MovieEntity = MovieEntity(
-        id = this.id,
-        title = this.title,
-        year = this.year,
-        genre = this.genre,
-        imdbRating = this.imdbRating,
-        distribution = this.distribution,
-        posterUrl = this.posterUrl
-    )
-
     private fun MovieEntity.toMovie(): Movie = Movie(
         id = this.id,
         title = this.title,
@@ -122,3 +127,13 @@ class MovieRepository(private val context: Context) {
     )
 }
 
+// Extension functions for conversion
+fun Movie.toEntity(): MovieEntity = MovieEntity(
+    id = this.id,
+    title = this.title,
+    year = this.year,
+    genre = this.genre,
+    imdbRating = this.imdbRating,
+    distribution = this.distribution,
+    posterUrl = this.posterUrl
+)
