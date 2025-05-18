@@ -12,7 +12,10 @@ import com.georgedregan.movielist.network.MovieApi
 @OptIn(ExperimentalPagingApi::class)
 class MovieRemoteMediator(
     private val database: MovieDatabase,
-    private val apiService: MovieApi
+    private val apiService: MovieApi,
+    private val genre: String?,
+    private val sortBy: String,
+    private val sortOrder: String,
 ) : RemoteMediator<Int, MovieEntity>() {
 
     override suspend fun load(
@@ -25,7 +28,6 @@ class MovieRemoteMediator(
             LoadType.APPEND -> {
                 val lastItem = state.lastItemOrNull()
                     ?: return MediatorResult.Success(endOfPaginationReached = true)
-                // Implement your pagination logic; e.g., infer next page
                 val currentPage = (lastItem.id / state.config.pageSize) + 1
                 currentPage
             }
@@ -34,14 +36,18 @@ class MovieRemoteMediator(
         return try {
             val response = apiService.getMovies(
                 page = page,
-                pageSize = state.config.pageSize
+                pageSize = state.config.pageSize,
+                genre = genre,
+                sortBy = sortBy,
+                sortOrder = sortOrder
             )
 
             val movieEntities = response.map { it.toEntity() }
 
             database.withTransaction {
                 if (loadType == LoadType.REFRESH) {
-//                    database.movieDao().clearAll()
+                    // Optional: clear only filtered data
+                    // database.movieDao().clearAll()
                 }
                 database.movieDao().insertAll(movieEntities)
             }

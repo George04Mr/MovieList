@@ -47,6 +47,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +90,7 @@ fun MovieListScreen(
     val movies: LazyPagingItems<Movie> = viewModel.moviesPagedData.collectAsLazyPagingItems()
     val isLoading by viewModel.isLoading
     val errorMessage by viewModel.errorMessage
-    val selectedGenre by viewModel.selectedGenre
+    val selectedGenre by viewModel.selectedGenre.collectAsState()
     val availableGenres by remember { derivedStateOf { viewModel.getAvailableGenres() } }
     val isNetworkAvailable by viewModel.isNetworkAvailable
     val isServerAvailable by viewModel.isServerAvailable
@@ -226,8 +227,12 @@ fun MovieListScreen(
                     ) {
                         items(
                             count = movies.itemCount,
-                            key = movies.itemKey { it.id },
-                            contentType = movies.itemContentType{"Movies"}
+                            key = { index ->
+                                val item = movies[index]
+                                // Combine id + index to ensure uniqueness even for identical items
+                                "movie-${item?.id}-${index}"
+                            },
+                            contentType = movies.itemContentType { "Movies" }
                         ) { index: Int ->
                             val movie: Movie? = movies[index]
                             movie?.let {
@@ -254,7 +259,8 @@ fun MovieListScreen(
 
                         // Error handling on pagination
                         item {
-                            val appendError = movies.loadState.append as? androidx.paging.LoadState.Error
+                            val appendError =
+                                movies.loadState.append as? androidx.paging.LoadState.Error
                             appendError?.let {
                                 Text(
                                     text = "Error loading more movies: ${it.error.localizedMessage}",

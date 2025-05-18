@@ -6,10 +6,15 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
 import androidx.room.Update
+import androidx.sqlite.db.SupportSQLiteQuery
 
 @Dao
 interface MovieDao {
+    @RawQuery(observedEntities = [MovieEntity::class])
+    fun getAllPaged(query: SupportSQLiteQuery): PagingSource<Int, MovieEntity>
+
     @Query("SELECT * FROM movies")
     fun getAllPaged(): PagingSource<Int, MovieEntity>
 

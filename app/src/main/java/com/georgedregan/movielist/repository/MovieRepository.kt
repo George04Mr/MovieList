@@ -1,23 +1,18 @@
 package com.georgedregan.movielist.repository
 
 import android.content.Context
-import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.PagingSource
-import androidx.paging.map
 import androidx.room.Room
-import com.georgedregan.movielist.database.MovieDao
+import com.georgedregan.movielist.database.MovieDatabase
 import com.georgedregan.movielist.database.MovieEntity
 import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.network.MovieApi
 import com.georgedregan.movielist.network.RetrofitClient
-import com.georgedregan.movielist.database.MovieDatabase
 import com.georgedregan.movielist.paging.MoviePagingSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class MovieRepository(context: Context) {
@@ -28,23 +23,16 @@ class MovieRepository(context: Context) {
     ).build()
     private val movieDao = db.movieDao()
 
-    @OptIn(ExperimentalPagingApi::class)
-    fun getAllPaged(): Flow<PagingData<Movie>> = Pager(
+    fun getAllPaged(
+        genre: String? = null,
+        sortBy: String? = "id",
+        sortOrder: String? = "asc"
+    ): Flow<PagingData<Movie>> = Pager(
         config = PagingConfig(pageSize = 20),
-        remoteMediator = MovieRemoteMediator(
-            database = db,
-            apiService = apiService
-        ),
-        pagingSourceFactory = { movieDao.getAllPaged() }
+        pagingSourceFactory = {
+            MoviePagingSource(apiService, movieDao, genre, sortBy.orEmpty(), sortOrder.orEmpty())
+        }
     ).flow
-        .map { pagingData -> pagingData.map { it.toMovie() } }
-
-//    fun getAllPaged(): Flow<PagingData<Movie>> = Pager(
-//        PagingConfig(pageSize = 20)
-//    ) {
-//        movieDao.getAllPaged()
-//    }.flow
-//        .map { value -> value.map { it.toMovie() } }
 
     suspend fun getMovies(
         genre: String? = null,

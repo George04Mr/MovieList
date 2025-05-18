@@ -7,12 +7,20 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.georgedregan.movielist.model.Movie
 import com.georgedregan.movielist.network.RetrofitClient
 import com.georgedregan.movielist.repository.MovieRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -27,11 +35,11 @@ class MovieViewModel(private val application: Application) : AndroidViewModel(ap
     private val _allMoviesLoaded = mutableStateOf(false)
     val allMoviesLoaded: State<Boolean> = _allMoviesLoaded
 
-    private val _selectedGenre = mutableStateOf<String?>(null)
-    val selectedGenre: State<String?> = _selectedGenre
+    private val _selectedGenre = MutableStateFlow<String?>(null)
+    val selectedGenre: StateFlow<String?> get() = _selectedGenre
 
-    private val _sortBy = mutableStateOf("id")
-    private val _sortOrder = mutableStateOf("asc")
+    private val _sortBy = MutableStateFlow("id")
+    private val _sortOrder = MutableStateFlow("asc")
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -45,12 +53,31 @@ class MovieViewModel(private val application: Application) : AndroidViewModel(ap
     private val _isServerAvailable = mutableStateOf(true)
     val isServerAvailable: State<Boolean> = _isServerAvailable
 
-    val moviesPagedData =
-        repository.getAllPaged().cachedIn(viewModelScope)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val moviesPagedData: StateFlow<PagingData<Movie>> = combine(
+        _selectedGenre,
+        _sortBy,
+        _sortOrder
+    ) { genre, sortBy, sortOrder ->
+        Triple(genre, sortBy, sortOrder)
+    }
+        .flatMapLatest { (genre, sortBy, sortOrder) ->
+            repository.getAllPaged(
+                genre = genre,
+                sortBy = sortBy,
+                sortOrder = sortOrder
+            )
+        }
+        .cachedIn(viewModelScope)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PagingData.empty()
+        )
 
     init {
-//        checkNetworkStatus()
-//        checkServerStatus()
+        checkNetworkStatus()
+        checkServerStatus()
         loadMovies()
     }
 
@@ -87,30 +114,6 @@ class MovieViewModel(private val application: Application) : AndroidViewModel(ap
                     networkInfo != null && networkInfo.isConnected
                 }
                 delay(5000)
-            }
-        }
-    }
-
-    fun loadMoreMovies() {
-        if (_isLoading.value || _allMoviesLoaded.value) return
-
-        _isLoading.value = true
-        viewModelScope.launch {
-            try {
-                if (isNetworkAvailable.value && isServerAvailable.value) {
-                    val newMovies = repository.getMovies(page = _currentPage.value + 1)
-                    if (newMovies.isNotEmpty()) {
-                        _movies.value = _movies.value + newMovies
-                        _currentPage.value += 1
-                    } else {
-                        _allMoviesLoaded.value = true
-                    }
-                }
-                // No else case since we don't paginate local data
-            } catch (e: Exception) {
-                _errorMessage.value = "Failed to load more movies: ${e.message}"
-            } finally {
-                _isLoading.value = false
             }
         }
     }
